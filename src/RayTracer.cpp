@@ -59,6 +59,7 @@ glm::dvec3 RayTracer::tracePixel(int i, int j)
 	double y = double(j)/double(buffer_height);
 
 	unsigned char *pixel = buffer.data() + ( i + j * buffer_width ) * 3;
+
 	col = trace(x, y);
 
 	pixel[0] = (int)( 255.0 * col[0]);
@@ -92,16 +93,64 @@ glm::dvec3 RayTracer::traceRay(ray& r, const glm::dvec3& thresh, int depth, doub
 		// rays.
 
 		const Material& m = i.getMaterial();
-
+		glm::dvec3 point = r.at(i.getT());
 		//consider reflections will recursive call traceRay until depth == 0
 		glm::dvec3 colorR = glm::dvec3(0.0, 0.0, 0.0);
-		if (depth > 0) {
+		if (depth > 0 && m.Refl()) {
 			glm::dvec3 ref = r.getDirection() - 2 * glm::dot(i.getN(), r.getDirection()) * i.getN();
 
-			ray nRay(r.at(i.getT()), ref, glm::dvec3(1,1,1), ray::REFLECTION);
+			ray nRay(point, glm::normalize(ref), glm::dvec3(1,1,1), ray::REFLECTION);
 			colorR += m.kr(i) * traceRay(nRay, thresh, depth-1, t);
 		}
 		
+		
+		//consider refractions
+		//only when opaque do we need to trace refraction rays.
+		if (m.Trans() && depth > 0) {
+			
+			glm::dvec3 V = -1.0 * r.getDirection();
+			double cos_i = glm::dot (i.getN(), V);
+			bool entered = cos_i > 0;
+			bool exited = cos_i < 0;
+
+
+			double n = 0;
+			glm::dvec3 N;
+
+			if (entered) {
+				N = i.getN();
+				n = 1.0 / m.index (i);
+			}
+			else if (exited) {
+				n = m.index(i);
+				N = -1.0 * i.getN();
+			}
+			else {
+				//critical point
+				N = glm::dvec3 (0,0,0);
+			}
+
+			double cos_tsquared = (1.0 - pow (n, 2) * (1 - pow (cos_i, 2)));
+
+			if (cos_tsquared > RAY_EPSILON && (entered || exited)) {
+
+				glm::dvec3 T = glm::refract(r.getDirection(), N, n);
+				T = glm::normalize(T);
+
+				ray nRay(point, T, glm::dvec3(1,1,1), ray::REFRACTION);
+				
+				glm::dvec3 newColor = traceRay (nRay, thresh, depth-1, t);
+
+				colorR += newColor; //* m.kt(i);
+			}
+			else {
+				glm::dvec3 ref = r.getDirection() - 2 * glm::dot(N, r.getDirection()) * N;
+
+				ray nRay(point, glm::normalize(ref), glm::dvec3(1,1,1), ray::REFLECTION);
+				colorR += traceRay(nRay, thresh, depth-1, t);
+				//TIR
+			}
+		}
 
 		colorC = m.shade(scene.get(), r, i) + colorR;
 	} else {
@@ -256,6 +305,32 @@ int RayTracer::aaImage()
 	//
 	// TIP: samples and aaThresh have been synchronized with TraceUI by
 	//      RayTracer::traceSetup() function
+
+	unsigned char* buf = NULL;
+	int w = 0, h = 0;
+	getBuffer(buf, w, h);
+
+	for (double i = 0; i < w; i++) {
+		for (double j = 0; j < h; j++) {
+			glm::dvec3 col(0,0,0);
+
+			for (double a = 0; a < samples; a++) {
+				for (double b = 0; b < samples; b++) {
+					//super sample here and add to buf
+					//Note that you are currently wasting a few cycles!
+					//due to aaimage running AFTER a trace.
+					//but oh welp
+
+					double x = (i + a/samples ) / double(buffer_width);
+					double y = (j + b/samples ) / double(buffer_height);
+
+					col += trace(x, y);
+				}
+			}
+			setPixel(int (i), int (j), col / pow (samples, 2));
+		}
+	}
+
 	return 0;
 }
 

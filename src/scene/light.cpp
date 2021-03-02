@@ -4,6 +4,7 @@
 #include "light.h"
 #include <glm/glm.hpp>
 #include <glm/gtx/io.hpp>
+#include <glm/gtx/string_cast.hpp>
 
 
 using namespace std;
@@ -22,6 +23,31 @@ glm::dvec3 DirectionalLight::shadowAttenuation(const ray& r, const glm::dvec3& p
 	
 	isect shadowI;
 	if (getScene()->intersect (nRay, shadowI)) {
+		if (shadowI.getMaterial().Trans()) {
+			ray rThrough(nRay);
+
+			rThrough.setPosition(nRay.at(shadowI));// + nRay.at(0.0001));
+			//printf ("continuing ray!\n");
+
+			isect transI;
+			if (getScene()->intersect (rThrough, transI)) {
+
+				double dist = transI.getT();
+				if (dist < RAY_EPSILON) {
+					cout << "Im hitting the same point mate" << endl;
+					return glm::dvec3(1,1,1);
+				}
+				glm::dvec3 sha = glm::pow (shadowI.getMaterial().kt(shadowI), glm::dvec3(dist, dist, dist));
+
+				rThrough.setPosition(rThrough.at(transI));
+				return sha * shadowAttenuation(rThrough, rThrough.at(transI));
+			}
+			else {
+				//doesn't intersect again for some reason?
+
+				//printf ("WARNING THIS SHOULDN\'T OCCUR\n");
+			}
+			}
 		return glm::dvec3(0,0,0);
 	}
 	return glm::dvec3(1.0, 1.0, 1.0);
@@ -74,12 +100,37 @@ glm::dvec3 PointLight::shadowAttenuation(const ray& r, const glm::dvec3& p) cons
 		//printf ("%f %f\n", glm::distance(position, p), glm::distance(nRay.at(shadowI.getT()), p));
 		glm::dvec3 iPoint = nRay.at(shadowI.getT());
 		if (glm::distance(position, p) >= glm::distance(iPoint, p)) {
+			
+			if (shadowI.getMaterial().Trans()) {
+				ray rThrough(nRay);
 
+				rThrough.setPosition(iPoint);// + nRay.at(0.0001));
+				//printf ("continuing ray!\n");
+
+				isect transI;
+				if (getScene()->intersect (rThrough, transI)) {
+					//change later
+					double dist = transI.getT();// - shadowI.getT();
+					if (dist < RAY_EPSILON) {
+						cout << "Im hitting the same point mate" << endl;
+						return glm::dvec3(1,1,1);
+					}
+					glm::dvec3 sha = glm::pow (shadowI.getMaterial().kt(shadowI), glm::dvec3(dist, dist, dist));
+
+					//cout << dist << endl;
+					//cout << dist << shadowI.getMaterial().kt(shadowI) << glm::to_string(sha) << endl;
+
+					rThrough.setPosition(rThrough.at(transI));
+					return sha * shadowAttenuation(rThrough, rThrough.at(transI));
+				}
+				else {
+					//doesn't intersect again for some reason?
+
+					//printf ("WARNING THIS SHOULDN\'T OCCUR\n");
+				}
+			}
 			//continue ray beyond translucent obj
-			nRay.setPosition(iPoint);
-			printf ("continuing ray!");
-			nRay.setBlacklist(shadowI.getObject());
-			shadowAttenuation (nRay, iPoint);
+			//cout << "blocking!" << endl;
 			return glm::dvec3(0,0,0);
 		}
 		//is behind light if here

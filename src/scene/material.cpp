@@ -101,7 +101,7 @@ glm::dvec3 TextureMap::getMappedValue(const glm::dvec2& coord) const
 	// [0, 1] x [0, 1] in 2-space to bitmap coordinates,
 	// and use these to perform bilinear interpolation
 	// of the values.
-
+	
 	return glm::dvec3(1, 1, 1);
 }
 

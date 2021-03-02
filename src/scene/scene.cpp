@@ -119,9 +119,9 @@ bool Scene::intersect(ray& r, isect& i) const {
 	for(const auto& obj : objects) {
 		isect cur;
 
-		SceneObject* child = dynamic_cast<SceneObject*>(obj.get());
+		// SceneObject* child = dynamic_cast<SceneObject*>(obj.get());
 
-		if (child && r.check(child)) continue;
+		// if (child && r.check(child)) continue;
 		
 		if( obj->intersect(r, cur) ) {
 			if(!have_one || (cur.getT() < i.getT())) {

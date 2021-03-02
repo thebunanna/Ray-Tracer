@@ -79,6 +79,14 @@ bool Trimesh::intersectLocal(ray& r, isect& i) const
 			if (!have_one || (cur.getT() < i.getT())) {
 				i = cur;
 				have_one = true;
+				if (this->vertNorms) {
+					//printf ("Oh my vert norms? \n");
+					//Calculate barycentric interp normals
+					i.interpolateBary(normals, (*face)[0], (*face)[1], (*face)[2]);
+				}
+				if (!materials.empty()) {
+					i.interpolateMaterial (materials, (*face)[0], (*face)[1], (*face)[2]);
+				}
 			}
 		}
 	}
@@ -125,24 +133,40 @@ bool TrimeshFace::intersectLocal(ray& r, isect& i) const
 	double time = glm::dot(a_coords - origin, normal) / denom;
 
 	//object behind ray origin
-	if (time < 0) return false;
+	if (time <= RAY_EPSILON) {
+		return false;
+	}
 
+	//p1 = a. p2 = b, p3 = c
+	glm::dvec3 edgeAB = b_coords-a_coords;
+	glm::dvec3 edgeAC = c_coords-a_coords;
 
-
-	//check if point of intersection within triangle
+	glm::mat2x2 inv(glm::dot (edgeAB, edgeAB),glm::dot(edgeAC,edgeAB),glm::dot(edgeAB, edgeAC),glm::dot(edgeAC, edgeAC));
 	glm::dvec3 pos = r.at(time);
 
-	bool ab_line = glm::dot (glm::cross(b_coords - a_coords, pos - a_coords), normal) >= 0;
-	bool bc_line = glm::dot (glm::cross(c_coords - b_coords, pos - b_coords), normal) >= 0;
-	bool ca_line = glm::dot (glm::cross(a_coords - c_coords, pos - c_coords), normal) >= 0;
+	inv = glm::inverse(inv);
+	glm::dvec2 uv = inv * glm::dvec2 ( glm::dot(pos-a_coords, edgeAB), glm::dot(pos-a_coords, edgeAC));
+
+	//check if point of intersection within triangle
+
+	// bool ab_line = glm::dot (glm::cross(b_coords - a_coords, pos - a_coords), normal) >= 0;
+	// bool bc_line = glm::dot (glm::cross(c_coords - b_coords, pos - b_coords), normal) >= 0;
+	// bool ca_line = glm::dot (glm::cross(a_coords - c_coords, pos - c_coords), normal) >= 0;
 	
-	if (!ab_line || !bc_line || !ca_line) return false;
+	// if (!ab_line || !bc_line || !ca_line) return false;
+
+	if (uv.x + uv.y >= 1 || uv.x < RAY_EPSILON || uv.y < RAY_EPSILON) {
+		return false;
+		//printf ("WE HAVE A PROBLEM!\n");
+	}
+	i.setBary(1 - uv.x - uv.y, uv.x, uv.y);
+
 
 	i.setObject(this);
 	i.setMaterial(this->getMaterial());
 	i.setT(time);
+
 	i.setN(normal);
-	//cout << "I hit the triangle!" << endl;
 	return true;
 }
 

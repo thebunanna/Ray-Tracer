@@ -43,19 +43,23 @@ public:
 	glm::dvec3 getPosition() const { return p; }
 	glm::dvec3 getDirection() const { return d; }
 	glm::dvec3 getAtten() const { return atten; }
+	double getIndex() const {return index; }
 	RayType type() const { return t; }
 
 	void setPosition(const glm::dvec3& pp) { p = pp; }
 	void setDirection(const glm::dvec3& dd) { d = dd; }
 	void setBlacklist(const SceneObject* obj) { blacklist = obj; }
-
+	void setIndex (const double i) { index = i; }
 	bool check (const SceneObject* obj) const;
+	
+
 
 private:
 	glm::dvec3 p;
 	glm::dvec3 d;
 	glm::dvec3 atten;
 	RayType t;
+	double index;
 	const SceneObject* blacklist;
 };
 
@@ -104,6 +108,8 @@ public:
 	{
 		setBary(glm::dvec3(alpha, beta, gamma));
 	}
+	void interpolateBary (std::vector<glm::dvec3> normals, int a, int b, int c);
+	void interpolateMaterial (std::vector<Material*> materials, int a, int b, int c);
 	const Material& getMaterial() const;
 
 private:
