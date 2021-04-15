@@ -1,9 +1,15 @@
-NAME: Jeongmu Daniel Hahn
-EID: jdh6372
+#List of Features
+Ray triangle and other primatives intersection
+Phong interpolation
+Whitted illumination model
+Antialiasing
+Texture map support
+Cube map support
+Multithreading of individual rays
+Spatial partition of objects
 
-All features have been implemented
+Gui and scenes were provided.
 
-Milestone 1:
 Antialiasing is done with shooting x^2 rays for each pixel by subdividing each pixel into subpixels and doing a average.
  (does not use original ray cast from before AA)
 
@@ -13,7 +19,6 @@ This was done due to the fact that the images created with attenuation (multiply
 was much dimmer than the reference solution. However, I do believe attenuating the light
 as it bounces within the object should be done.
 
-Milestone2:
 Cubemap was implement via heuristics. Once I figured out the face of the cubemap to use (via largest element in ray direction),
 The ray direction was scaled then transformed into UV coords for use.
 
@@ -28,5 +33,3 @@ Although this is a very naive method of separating the two groups, it is still s
 Multithreading via pthreads was implemented for faster computation. 
 Some additional optimizations that can be done is within the shadow handling code (Should not be calling interesect 
 multiple times when ray is traveling in a line) but time did not permit.
-
-Fun project though. 
