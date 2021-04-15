@@ -15,12 +15,16 @@
 #include <algorithm>
 #include <glm/glm.hpp>
 #include <glm/gtx/io.hpp>
+#include <glm/mat4x4.hpp>
+#include <glm/gtx/transform.hpp>
 #include <string.h> // for memset
 
 #include <iostream>
 #include <fstream>
 
 using namespace std;
+
+class BVHNode;
 extern TraceUI* traceUI;
 
 // Use this variable to decide if you want to print out
@@ -141,7 +145,7 @@ glm::dvec3 RayTracer::traceRay(ray& r, const glm::dvec3& thresh, int depth, doub
 				
 				glm::dvec3 newColor = traceRay (nRay, thresh, depth-1, t);
 
-				colorR += newColor; //* m.kt(i);
+				colorR += newColor * m.kt(i);
 			}
 			else {
 				glm::dvec3 ref = r.getDirection() - 2 * glm::dot(N, r.getDirection()) * N;
@@ -163,7 +167,13 @@ glm::dvec3 RayTracer::traceRay(ray& r, const glm::dvec3& thresh, int depth, doub
 		//       Check traceUI->cubeMap() to see if cubeMap is loaded
 		//       and enabled.
 
-		colorC = glm::dvec3(0.0, 0.0, 0.0);
+		if (traceUI->cubeMap()) {
+			colorC = traceUI->getCubeMap()->getColor(r);
+		}
+		else {
+			colorC = glm::dvec3(0.0, 0.0, 0.0);
+		}
+		
 	}
 #if VERBOSE
 	std::cerr << "== depth: " << depth+1 << " done, returning: " << colorC << std::endl;
@@ -236,8 +246,15 @@ bool RayTracer::loadScene(const char* fn)
 	return true;
 }
 
+
+std::mutex tcheck_mutex;
+
+
 void RayTracer::traceSetup(int w, int h)
 {
+
+	const std::lock_guard<std::mutex> lock (tcheck_mutex);
+
 	size_t newBufferSize = w * h * 3;
 	if (newBufferSize != buffer.size()) {
 		bufferSize = newBufferSize;
@@ -260,6 +277,24 @@ void RayTracer::traceSetup(int w, int h)
 
 	// YOUR CODE HERE
 	// FIXME: Additional initializations
+
+	//initial BVH
+	scene.get()->computeBVH();
+
+	waitRender();
+	tvec.clear();
+	tvecStatus.clear();
+}
+
+void threadTrace (RayTracer* r, int start, int end, int width, int index) 
+{
+	for (int i = start; i < end; i++) {
+		for (int j = 0; j < width; j++) {
+			r->tracePixel(i, j);
+		}
+	}	
+	const std::lock_guard<std::mutex> lock (tcheck_mutex);
+	r->tvecStatus[index] = true;
 }
 
 /*
@@ -274,29 +309,36 @@ void RayTracer::traceSetup(int w, int h)
  */
 void RayTracer::traceImage(int w, int h)
 {
-	//printf ("setting up tracer\n");
 	// Always call traceSetup before rendering anything.
 	traceSetup(w,h);
 
-	// YOUR CODE HERE
-	// FIXME: Start one or more threads for ray tracing
-	//
-	// TIPS: Ideally, the traceImage should be executed asynchronously,
-	//       i.e. returns IMMEDIATELY after working threads are launched.
-	//
-	//       An asynchronous traceImage lets the GUI update your results
-	//       while rendering.
-
 	// fuck async
-	
 
-	for (int i = 0; i < w; i++) {
-		for (int j = 0; j < h; j++) {
-			tracePixel(i,j);
-		}
+	//make threads based on height
+	int tcount = traceUI->getThreads();
+
+	int ppt = h / tcount;
+	int leftover = h - ppt * h;
+
+	std::vector<int> pptvec;
+	for (int i = 0; i < tcount; i++) {
+		pptvec.emplace_back(ppt + (i < leftover ? 1 : 0));
 	}
+	const std::lock_guard<std::mutex> lock (tcheck_mutex);
+
+	tvecStatus.resize(tcount);
+	int rtotal = 0;
+	int index = 0;
+	for (int count : pptvec) {
+		tvec.emplace_back(std::thread(threadTrace, this, rtotal, rtotal + count, w, index));
+		rtotal += count;
+		index ++;
+	}
+
 	return;
 }
+
+
 
 int RayTracer::aaImage()
 {
@@ -342,6 +384,11 @@ bool RayTracer::checkRender()
 	//
 	// TIPS: Introduce an array to track the status of each worker thread.
 	//       This array is maintained by the worker threads.
+
+	const std::lock_guard<std::mutex> lock (tcheck_mutex);
+	for (auto x : tvecStatus) {
+		if (!x) return false;
+	}
 	return true;
 }
 
@@ -353,6 +400,10 @@ void RayTracer::waitRender()
 	//        traceImage implementation.
 	//
 	// TIPS: Join all worker threads here.
+
+	for (int i = 0; i < tvec.size(); i++) {
+		tvec[i].join();
+	}
 }
 
 

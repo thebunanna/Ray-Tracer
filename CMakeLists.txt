@@ -18,6 +18,10 @@ MESSAGE(STATUS "stdgl: ${stdgl_libraries}")
 
 ADD_SUBDIRECTORY(src)
 
+
+
 IF (EXISTS ${CMAKE_SOURCE_DIR}/sln/CMakeLists.txt)
 	ADD_SUBDIRECTORY(sln)
+
+
 ENDIF()

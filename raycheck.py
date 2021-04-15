@@ -20,10 +20,13 @@ def _msg(text, level, color):
     return Style.BRIGHT+color+level+Fore.RESET+Style.NORMAL+text
 
 def compare(imagefn, reffn, rel, args):
-    image = imread(imagefn)
-    ref = imread(reffn)
-    image = image.reshape((-1, 1))
-    ref = ref.reshape((-1, 1))
+    try:
+        image = imread(imagefn)
+        ref = imread(reffn)
+        image = image.reshape((-1, 1))
+        ref = ref.reshape((-1, 1))
+    except:
+        return 0
     '''
     Root-mean-square error
     '''

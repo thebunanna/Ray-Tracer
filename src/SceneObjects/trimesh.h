@@ -50,6 +50,9 @@ public:
 	void addNormal(const glm::dvec3 &);
 	bool addFace(int a, int b, int c);
 
+	auto beginFaces() const { return faces.cbegin(); }
+	auto endFaces() const { return faces.cend(); }
+
 	const char *doubleCheck();
 
 	void generateNormals();

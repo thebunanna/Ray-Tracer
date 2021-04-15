@@ -32,6 +32,7 @@ using std::unique_ptr;
 
 class Light;
 class Scene;
+class BVHNode;
 
 template <typename Obj>
 class KdTree;
@@ -217,6 +218,7 @@ protected:
 };
 
 class Scene {
+	friend BVHNode;
 public:
 	typedef std::vector<Light*>::iterator liter;
 	typedef std::vector<Light*>::const_iterator cliter;
@@ -263,13 +265,13 @@ public:
 	            bool actualTextures) const;
 
 	const BoundingBox& bounds() const { return sceneBounds; }
-
+	void computeBVH();
 
 private:
 	std::vector<std::unique_ptr<Geometry>> objects;
 	std::vector<std::unique_ptr<Light>> lights;
 	Camera camera;
-
+	BVHNode *bvh;
 	// This is the total amount of ambient light in the scene
 	// (used as the I_a in the Phong shading model)
 	glm::dvec3 ambientIntensity;
@@ -306,5 +308,27 @@ public:
 
 	mutable std::vector<std::pair<ray*, isect*>> intersectCache;
 };
+
+class BVHNode {
+    friend Scene;
+    BoundingBox box;
+
+    BVHNode* parent;
+    std::vector<BVHNode*> children;
+    std::vector<Geometry*> geom;
+
+public:
+    BVHNode();
+
+    BVHNode(Scene* s);
+    BVHNode(BVHNode* p, std::vector<Geometry*> g);
+
+    ~BVHNode();
+
+    //Splits the node in half (not optimally) 
+    void split ();
+	bool intersect (ray &r, isect &i);
+};
+
 
 #endif // __SCENE_H__

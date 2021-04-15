@@ -54,6 +54,8 @@ public:
 	const Scene& getScene() { return *scene; }
 
 	bool stopTrace;
+	
+	std::vector<bool> tvecStatus;
 
 private:
 	glm::dvec3 trace(double x, double y);
@@ -67,7 +69,7 @@ private:
 	double aaThresh;
 	int samples;
 	std::unique_ptr<Scene> scene;
-
+	std::vector<std::thread> tvec;
 	bool m_bBufferReady;
 
 };

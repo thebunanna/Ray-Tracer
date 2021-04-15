@@ -117,3 +117,14 @@ void BoundingBox::merge(const BoundingBox& bBox)
 	dirty  = true;
 	bEmpty = false;
 }
+
+BoundingBox BoundingBox::expand(const BoundingBox& bBox) 
+{
+	BoundingBox nbox (this->getMin(), this->getMax());
+	nbox.merge (bBox);
+	return nbox;
+}
+
+glm::dvec3 BoundingBox::getCenter () const {
+	return (bmin + bmax) * 0.5;
+}

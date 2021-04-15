@@ -163,10 +163,24 @@ bool TrimeshFace::intersectLocal(ray& r, isect& i) const
 
 
 	i.setObject(this);
-	i.setMaterial(this->getMaterial());
 	i.setT(time);
 
-	i.setN(normal);
+	if (parent->vertNorms) {
+		i.interpolateBary(parent->normals, (*this)[0], (*this)[1], (*this)[2]);
+	}
+	else {
+		i.setN(normal);
+	}
+	
+	if (!parent->materials.empty()) {
+		i.interpolateMaterial (parent->materials, (*this)[0], (*this)[1], (*this)[2]);
+
+	}
+	else {
+		i.setMaterial(this->getMaterial());	
+	}
+	
+
 	return true;
 }
 

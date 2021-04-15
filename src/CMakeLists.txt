@@ -41,3 +41,7 @@ FIND_PACKAGE(ZLIB REQUIRED)
 target_link_libraries(ray ${ZLIB_LIBRARIES})
 SET_PROPERTY(TARGET ray APPEND PROPERTY INCLUDE_DIRECTORIES ${ZLIB_INCLUDE_DIR})
 target_link_libraries(ray ${OPENGL_glu_LIBRARY})
+
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads REQUIRED)
+target_link_libraries(ray PRIVATE Threads::Threads)

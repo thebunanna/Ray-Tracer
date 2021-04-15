@@ -1,5 +1,6 @@
-*.ray
+
 *.o
 *.out
 build/**
 assets/**
+.vscode

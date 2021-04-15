@@ -88,6 +88,7 @@ TextureMap::TextureMap(string filename)
 		error.append("'.");
 		throw TextureMapException(error);
 	}
+	//printf ("w: %d, f: %d, d: %ld\n", width, height, data.size());
 }
 
 glm::dvec3 TextureMap::getMappedValue(const glm::dvec2& coord) const
@@ -101,18 +102,81 @@ glm::dvec3 TextureMap::getMappedValue(const glm::dvec2& coord) const
 	// [0, 1] x [0, 1] in 2-space to bitmap coordinates,
 	// and use these to perform bilinear interpolation
 	// of the values.
+	double x = coord.x * width;
+	double y = coord.y * height;
 	
-	return glm::dvec3(1, 1, 1);
+	//When getting corners, decide which pixels should be interp
+	//Split current pixel into 4.
+	double xpos = trunc(x + 1) - x;
+	double ypos = trunc(y + 1) - y;
+
+	glm::dvec3 tl, tr, bl, br;
+	int ix = x, iy = y;
+
+	glm::dvec2 tcoords, bias;
+
+	// if (xpos >= 0.5 && ypos >= 0.5) {
+	// 	//top left
+	// 	tl = getPixelAt(ix - 1, iy - 1);
+	// 	tr = getPixelAt(ix, iy - 1);
+	// 	bl = getPixelAt(ix - 1, iy);
+	// 	br = getPixelAt(ix, iy);
+	// 	bias = glm::dvec2(1, 1);
+	// }
+	// else if (xpos <= 0.5 && ypos >= 0.5) {
+	// 	//top right
+	// 	tl = getPixelAt(ix, iy - 1);
+	// 	tr = getPixelAt(ix + 1, iy - 1);
+	// 	bl = getPixelAt(ix, iy);
+	// 	br = getPixelAt(ix + 1, iy);
+	// 	bias = glm::dvec2(0, 1);
+	// }
+	// else if (xpos >= 0.5 && ypos <= 0.5) {
+	// 	//bottom left
+	// 	tl = getPixelAt(ix - 1, iy);
+	// 	tr = getPixelAt(ix, iy);
+	// 	bl = getPixelAt(ix - 1, iy + 1);
+	// 	br = getPixelAt(ix, iy + 1);
+	// 	bias = glm::dvec2(1, 0);
+	// }
+	// else {
+	// 	//bottom right
+		
+	// }
+	tl = getPixelAt(ix, iy);
+	tr = getPixelAt(ix + 1, iy);
+	bl = getPixelAt(ix, iy+1);
+	br = getPixelAt(ix + 1, iy + 1);
+	bias = glm::dvec2(0, 0);
+	//Trunc > ciel since x might be x.0
+	double ax = (xpos + bias.x);
+	double xb = (1 - ax);
+	double cx = (ypos + bias.y);
+	double xd = (1 - cx);
+
+	//Get 4 corners of pictures and computer bilinear interp
+
+	///printf ("x: %f - %f, %f, y: %f - %f, %f\n", x, a, b, y, c, d);
+	//lecture slides lied to meeeeee
+	return xd * (xb * br + ax * bl) + cx * (xb * tr + ax * tl);
 }
 
 glm::dvec3 TextureMap::getPixelAt(int x, int y) const
 {
-	// YOUR CODE HERE
-	//
-	// In order to add texture mapping support to the
-	// raytracer, you need to implement this function.
+	//since i am looking at 1 + pixels ahead, refit to prevent segfault
+	if (x >= width) {
+		x = width-1;
+	}
+	if (y >= height) {
+		y = height - 1;
+	}
 
-	return glm::dvec3(1, 1, 1);
+	ulong index = 3 * (y * width + x);
+	double r = data[index] / 255.0;
+	double g = data[index+1] / 255.0;
+	double b = data[index+2] / 255.0;
+	//Make sure not to normalize or else colors become really dim.
+	return glm::dvec3(r,g,b);
 }
 
 glm::dvec3 MaterialParameter::value(const isect& is) const

@@ -65,4 +65,8 @@ public:
 	double area();
 	double volume();
 	void merge(const BoundingBox& bBox);
+
+	BoundingBox expand(const BoundingBox& bBox);
+
+	glm::dvec3 getCenter() const;
 };
